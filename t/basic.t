@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 23;
+use Test::More tests => 35;
 use Calendar::Slots;
 use DateTime;
 use YAML;
@@ -8,105 +8,115 @@ sub _dump {  print Dump @_ }
 
 {
 	my $cal = new Calendar::Slots; 
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	is( $cal->find_name( date=>'2009-10-11', time=>'10:30' ), 'normal', 'time found' );
-	ok( $cal->find_name( date=>'2009-10-11', time=>'11:29' ), 'time found closely' );
-	ok( !$cal->find_name( date=>'2009-10-11', time=>'11:30' ), 'time not found' );
+	my $slot = new Calendar::Slots::Slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( $slot ); 
+	is( $slot->weekday, 7, '2009-10-11 is a Sunday');
+	is( $cal->name( date=>'2009-10-11', time=>'10:30' ), 'normal', 'time found' );
+	ok( $cal->name( date=>'2009-10-11', time=>'11:29' ), 'time found closely' );
+	ok( !$cal->name( date=>'2009-10-11', time=>'11:30' ), 'time not found' );
 }
 {
 	my $cal = new Calendar::Slots();
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'11:30', end=>'22:30', name=>'urgent' ); 
-	is( $cal->find_name( date=>'2009-10-11', time=>'11:30' ), 'urgent', 'urgent time found' );
-	my $event = $cal->find( date=>'2009-10-11', time=>'11:30' );
-	ok( ref $event, 'urgent event object exits'); 
-	#$cal->weekday_event( day=>0, start=>'10:30', end=>'11:30', name=>'normal' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:30', end=>'22:30', name=>'urgent' ); 
+	is( $cal->name( date=>'2009-10-11', time=>'11:30' ), 'urgent', 'urgent time found' );
+	my $slot = $cal->find( date=>'2009-10-11', time=>'11:30' );
+	ok( ref $slot, 'urgent slot object exits'); 
+	#$cal->weekday_slot( day=>0, start=>'10:30', end=>'11:30', name=>'normal' );
 }
 {
 	my $cal = new Calendar::Slots();
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'11:30', end=>'22:30', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'bottom adjacent events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'22:29' ), 'normal', 'bottom adjacent normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:30', end=>'22:30', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'bottom adjacent slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'22:29' ), 'normal', 'bottom adjacent normal time found' );
 }
 {
 	my $cal = new Calendar::Slots;
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'1:00', end=>'10:30', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'top adjacent events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'9:30' ), 'normal', 'top adjacent normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'1:00', end=>'10:30', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'top adjacent slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'9:30' ), 'normal', 'top adjacent normal time found' );
 }
 {
 	my $cal = new Calendar::Slots;
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'same events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'10:30' ), 'normal', 'same normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'same slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'10:30' ), 'normal', 'same normal time found' );
 }
 {
 	my $cal = new Calendar::Slots;
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'11:00', end=>'22:30', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'bottom crossed events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'11:30' ), 'normal', 'bottom crossed normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:00', end=>'22:30', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'bottom crossed slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'11:30' ), 'normal', 'bottom crossed normal time found' );
 }
 {
 	my $cal = new Calendar::Slots;
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'1:00', end=>'11:00', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'top crossed events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'1:30' ), 'normal', 'top crossed normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'1:00', end=>'11:00', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'top crossed slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'1:30' ), 'normal', 'top crossed normal time found' );
 }
 {
 	my $cal = new Calendar::Slots;
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'12:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'0:30', end=>'11:30', name=>'normal' ); 
-	my @rows = $cal->list;
-	is( scalar(@rows), 1, 'many overlapping events merged' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'0:30' ), 'normal', 'many overlapping normal time found top' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'11:00' ), 'normal', 'many overlapping normal time found bottom' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'12:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'0:30', end=>'11:30', name=>'normal' ); 
+	my @rows = $cal->all;
+	is( scalar(@rows), 1, 'many overlapping slots merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'0:30' ), 'normal', 'many overlapping normal time found top' );
+	is( $cal->name( date=>'2009-10-11', time=>'11:00' ), 'normal', 'many overlapping normal time found bottom' );
 }
 {
 	my $cal = new Calendar::Slots();
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
-	$cal->event( date=>'2009-10-11', start=>'11:00', end=>'22:30', name=>'urgent' ); 
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'11:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:00', end=>'22:30', name=>'urgent' ); 
 
-	is( $cal->find_name( date=>'2009-10-11', time=>'10:59' ), 'normal', 'overlapping normal time found' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'11:00' ), 'urgent', 'overlapping urgent time found' );
+	is( $cal->name( date=>'2009-10-11', time=>'10:59' ), 'normal', 'overlapping normal time found' );
+	is( $cal->name( weekday=>7, time=>'11:00' ), 'urgent', 'overlapping urgent time found' );
 
-	$cal->event( date=>'2009-10-11', start=>'11:00', end=>'22:00', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:00', end=>'22:00', name=>'normal' ); 
 
-	is( $cal->find_name( date=>'2009-10-11', time=>'11:00' ), 'normal', 'split normal time found' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'21:59' ), 'normal', 'split late normal time found' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'22:00' ), 'urgent', 'split urgent time found' );
-	is( $cal->num_events, 2, 'many overlapping events merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'11:00' ), 'normal', 'split normal time found' );
+	is( $cal->name( date=>'2009-10-11', time=>'21:59' ), 'normal', 'split late normal time found' );
+	is( $cal->name( date=>'2009-10-11', time=>'22:00' ), 'urgent', 'split urgent time found' );
+	is( $cal->num_slots, 2, 'many overlapping slots merged' );
 
-	$cal->event( date=>'2009-10-11', start=>'12:00', end=>'13:00', name=>'urgent' ); 
+	$cal->slot( date=>'2009-10-11', start=>'12:00', end=>'13:00', name=>'urgent' ); 
 
-	is( $cal->find_name( date=>'2009-10-11', time=>'12:00' ), 'urgent', 'split content urgent time found' );
-	is( $cal->num_events, 4, 'many overlapping events merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'12:00' ), 'urgent', 'split content urgent time found' );
+	is( $cal->num_slots, 4, 'many overlapping slots merged' );
 
-	$cal->event( date=>'2009-10-11', start=>'11:50', end=>'12:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:50', end=>'12:30', name=>'normal' ); 
 
-	is( $cal->find_name( date=>'2009-10-11', time=>'12:00' ), 'normal', 're-split content normal time found' );
-	is( $cal->find_name( date=>'2009-10-11', time=>'12:30' ), 'urgent', 're-split content urgent time found' );
-	is( $cal->num_events, 4, 'many overlapping events merged' );
+	is( $cal->name( date=>'2009-10-11', time=>'12:00' ), 'normal', 're-split content normal time found' );
+	is( $cal->name( date=>'2009-10-11', time=>'12:30' ), 'urgent', 're-split content urgent time found' );
+	is( $cal->num_slots, 4, 'many overlapping slots merged' );
 
-	$cal->event( date=>'2009-10-11', start=>'11:00', end=>'16:30', name=>'normal' ); 
+	$cal->slot( date=>'2009-10-11', start=>'11:00', end=>'16:30', name=>'normal' ); 
 
-	is( $cal->num_events, 2, 'many overlapping events merged' );
+	is( $cal->num_slots, 2, 'many overlapping slots merged' );
 }
 {
-	# midnight crossed event
+	# midnight crossed slot
 	my $cal = new Calendar::Slots();
-	$cal->event( date=>'2009-10-11', start=>'10:30', end=>'00:30', name=>'normal' ); 
-	is( $cal->find_name( date=>'2009-10-11', time=>'00:15' ), 'normal', 'midnight normal time found' );
+	$cal->slot( date=>'2009-10-11', start=>'10:30', end=>'00:30', name=>'normal' ); 
+	is( $cal->name( date=>'2009-10-12', time=>'00:15' ), 'normal', 'midnight normal time found' );
+	is( $cal->num_slots, 2, 'midnight splitted' );
+}
+{
+	my $cal = new Calendar::Slots;
+	$cal->slot( date=>'2009-10-11', start=>'10:00', end=>'13:00', name=>'normal' ); 
+	$cal->slot( weekday=>7, start=>'10:30', end=>'11:00', name=>'normal' ); 
+	is( $cal->num_slots, 2, 'weekday with date slots not merged' );
+	is( $cal->name( weekday=>7, time=>'12:00' ), 'normal', 'weekday normal time found' );
 }
 
 #done_testing;
