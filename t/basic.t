@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 35;
+use Test::More tests => 39;
 use Calendar::Slots;
 use DateTime;
 use YAML;
@@ -117,6 +117,27 @@ sub _dump {  print Dump @_ }
 	$cal->slot( weekday=>7, start=>'10:30', end=>'11:00', name=>'normal' ); 
 	is( $cal->num_slots, 2, 'weekday with date slots not merged' );
 	is( $cal->name( weekday=>7, time=>'12:00' ), 'normal', 'weekday normal time found' );
+}
+{
+    #delete slots
+	;
+}
+{
+	my $cal = new Calendar::Slots;
+	$cal->slot( start_date=>'2009-10-11', end_date=>'2009-10-14', start=>'10:00', end=>'13:00', name=>'normal' ); 
+	is( $cal->num_slots, 4, 'same slot over several days' );
+	is( $cal->name( date=>'2009-10-13', time=>'12:30' ), 'normal', 'found slot over serveral days' );
+}
+{
+	my $cal = new Calendar::Slots;
+	$cal->slot( start_date=>'2009-10-11', end_date=>'2009-10-14', start=>'12:00', end=>'06:00', name=>'normal' ); 
+	#is( $cal->num_slots, 4, 'same slot over several days' );
+	is( $cal->name( date=>'2009-10-13', time=>'03:30' ), 'normal', 'found split slot over serveral days' );
+	is( $cal->name( date=>'2009-10-13', time=>'09:30' ), '', 'not found split slot over serveral days' );
+}
+{
+    #start_datetime => end_datetime
+	;
 }
 
 #done_testing;

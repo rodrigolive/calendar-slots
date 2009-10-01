@@ -1,13 +1,14 @@
 package Calendar::Slots::Utils;
 use strict;
 use warnings;
+use DateTime::Format::Strptime;
 use Carp;
 
 use vars qw(@ISA @EXPORT);
 require Exporter;
 
 @ISA=qw(Exporter);
-@EXPORT = qw/format_args check_date check_weekday check_time/; 
+@EXPORT = qw/format_args check_date check_weekday check_time parse_dt/; 
 
 sub format_args {
 	my %args = @_;
@@ -33,6 +34,12 @@ sub check_date {
       unless length($date) == 8;
 }
 
+sub parse_dt {
+    my ( $format, $date ) = @_;
+    use DateTime::Format::Strptime;
+    my $parser = DateTime::Format::Strptime->new( pattern => $format );
+    return $parser->parse_datetime( $date );
+}
 
 
 1;

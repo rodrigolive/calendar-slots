@@ -39,16 +39,35 @@ sub slot {
 
 sub _create_slots {
     my $self = shift;
+
 	scalar(@_) == 1 and return $_[0];
     my %args = format_args(@_);
-    if ( $args{start} > $args{end} ) {
+
+	$args{start_date} and !$args{end_date} and croak 'Missing end_date';
+	$args{end_date} and !$args{start_date} and croak 'Missing start_date';
+
+    if ( $args{start_date} && $args{end_date} ) {
+
+        my $start_dt = parse_dt( '%Y%m%d', $args{start_date} )
+          or croak "Could not parse start_date '$args{start_date}'";
+        my $end_dt = parse_dt( '%Y%m%d', $args{end_date} )
+          or croak "Could not parse end_date '$args{end_date}'";
+		delete $args{start_date};
+		delete $args{end_date};
+		my @slots;
+		for( my $dt=$start_dt; $dt <= $end_dt; $dt->add( days=>1 ) ) {
+			push @slots, $self->_create_slots(date=>$dt->ymd, %args);
+		}
+		return @slots;	
+	}
+    elsif ( $args{start} > $args{end} ) {
         my $current = Calendar::Slots::Slot->new( %args, end   => '2400' );
         my $next    = Calendar::Slots::Slot->new( %args, start => '0000' );
 		$next->reschedule( days=>1 );
 		return ($current, $next);
     }
     else {
-        Calendar::Slots::Slot->new(%args);
+        return Calendar::Slots::Slot->new(%args);
     }
 }
 
@@ -206,7 +225,7 @@ selected date until midnight, and another for the next day from midnight until e
 
 =head1 METHODS
 
-=head2 slot ( name=>Str, { date=>'YYYY-MM-DD' | weekday=>1..7 }, start=>'HH:MM', end=>'HH:MM' )
+=head2 slot ( name=>Str, { date=>'YYYY-MM-DD' | weekday=>1..7 | start_date/end_date }, start=>'HH:MM', end=>'HH:MM' )
 
 Add a time slot to the calendar.
 
@@ -215,6 +234,20 @@ the slots are merged and become a single slot.
 
 If the new time slot overlaps an existing slot with a different C<name>,
 it overwrites the previous slot, splitting it if necessary. 
+
+	my $cal = Calendar::Slots->new;
+	
+	# reserve that monday slot
+
+	$cal->slot( date=>'2009-11-30', start=>'10:30', end=>'11:00', name=>'doctor appointment' ); 
+
+	# create a time slot for a given date
+
+	$cal->slot( date=>'2009-01-01', start=>'10:30', end=>'24:00' ); 
+
+	# create a recurring time slot over 3 calendar days
+
+	$cal->slot( start_date=>'2009-01-01', end_date=>'2009-02-01', start=>'10:30', end=>'24:00' ); 
 
 =head2 find ( { date=>'YYYY-MM-DD' | weekday=>1..7 }, time=>'HH:MM' )
 
@@ -233,6 +266,10 @@ Returns a  ARRAY of all slot objects in the calendar.
 =head2 all 
 
 Returns an ARRAY of all slot objects in the calendar.
+
+=head1 SEE ALSO
+
+L<DateTime::SpanSet>
 
 =head1 TODO
 
