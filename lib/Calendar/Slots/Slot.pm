@@ -1,13 +1,17 @@
 package Calendar::Slots::Slot;
 use Moose;
 use Carp;
-use Calendar::Slots::Utils;
+use Moose::Util::TypeConstraints;
+use namespace::autoclean;
 
-has 'name'    => ( is => 'rw', isa => 'Str' );
-has 'when'    => ( is => 'rw', isa => 'Int', required=>1, );
-has 'start'   => ( is => 'rw', isa => 'Int' );
-has 'end'     => ( is => 'rw', isa => 'Int' );
-has 'type'    => ( is => 'rw', isa => 'Str', required=>1 );
+has name    => ( is => 'rw', isa => 'Str' );  # the slot given name
+has when    => ( is => 'rw', isa => 'Int', required=>1, );  # weekday num or date
+has type    => ( is => 'rw', isa => enum([qw/weekday date/]), required=>1 );  # type of slot
+has start   => ( is => 'rw', isa => 'Int' );  # start time
+has end     => ( is => 'rw', isa => 'Int' );  # end time
+has data    => ( is => 'rw', isa => 'Any' );  # free data for your own use
+
+use Calendar::Slots::Utils;
 
 around BUILDARGS => sub {
 	my $orig = shift;
@@ -166,7 +170,16 @@ Calendar::Slots::Slot - the time-slot object
 
 =head1 DESCRIPTION
 
-This is the basic 
+This is the basic class defining a calendar slot. 
+
+=head1 ATTRIBUTES
+
+    has name    => ( is => 'rw', isa => 'Str' );
+    has data    => ( is => 'rw', isa => 'Any' );
+    has when    => ( is => 'rw', isa => 'Int', required=>1, );
+    has start   => ( is => 'rw', isa => 'Int' );
+    has end     => ( is => 'rw', isa => 'Int' );
+    has type    => ( is => 'rw', isa => 'Str', required=>1 );
 
 =head1 METHODS
 

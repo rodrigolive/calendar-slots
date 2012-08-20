@@ -3,7 +3,7 @@ use warnings;
 use Test::More; # tests => 45;
 use Calendar::Slots;
 use DateTime;
-sub _dump {  require YAML; print YAML::Dump @_ }
+sub _dump {  require YAML; print YAML::Dump( @_ ) }
 
 {
     my $cal = new Calendar::Slots; 
@@ -151,6 +151,13 @@ sub _dump {  require YAML; print YAML::Dump @_ }
     my $cal = new Calendar::Slots;
     $cal->slot( weekday=>1, start=>'12:00', end=>'06:00', name=>'normal - with text : long' ); 
     is  $cal->name( date=>'2012-08-20', time=>'12:00' ), 'normal - with text : long', 'text arg mod bug' ; 
+}
+
+{
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'12:00', end=>'06:00', name=>'normal', data=>{ yy=>10, xx=>33 } ); 
+    is  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{xx}, 33, 'data param';
+    ok  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{yy} != 12, 'not data param';
 }
 
 done_testing;

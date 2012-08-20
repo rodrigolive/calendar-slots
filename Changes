@@ -1,4 +1,7 @@
-0.10  Thu Nov 12 09:49:06 CET 2009
+0.11  Mon Aug 20 22:00:23 CEST 2012
+  * Added support for $slot->data attribute
+
+0.10  Mon Aug 20 20:05:00 CEST 2012
   * Fixed slot name bug - spaces and other chars removed inadvertently
   * Added weekday to date conversions for slot finding
 
