@@ -60,12 +60,24 @@ sub contains {
     if ( $type eq $self->type ) {
         return if $when ne $self->when;
     }
-    elsif ( $type eq 'date' and $self->type eq 'weekday' ) {
-        return;
+    elsif ( $type eq 'date' && $self->type eq 'weekday' ) {
+        $when = parse_dt( '%Y%m%d', $when )->wday;
+        $when == 0 and $when = 7;
+        return if $when ne $self->when;
     }
     elsif( $when ne $self->weekday ) {
         return ;
     }
+    #   if ( $type eq $self->type ) {
+    #       return if $when ne $self->when;
+    #   }
+    #   elsif ( $type eq 'date' and $self->type eq 'weekday' ) {
+    #       return;
+    #   }
+    #   elsif( $when ne $self->weekday ) {
+    #       return ;
+    #   }
+
 
     if ($time) {
         return $time >= $self->start && $time < $self->end;

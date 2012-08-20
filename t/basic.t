@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 39;
+use Test::More tests => 42;
 use Calendar::Slots;
 use DateTime;
 use YAML;
@@ -138,6 +138,14 @@ sub _dump {  print Dump @_ }
 {
     #start_datetime => end_datetime
 	;
+}
+{
+	my $cal = new Calendar::Slots;
+	$cal->slot( weekday=>1, start=>'12:00', end=>'06:00', name=>'normal' ); 
+	$cal->slot( weekday=>2, start=>'12:00', end=>'06:00', name=>'normal' ); 
+	is  $cal->name( date=>'2012-08-20', time=>'12:00' ), 'normal', 'convert from date to weekday' ;  # 8-20 is a monday (1)
+	is  $cal->name( date=>'2012-08-21', time=>'12:00' ), 'normal', 'convert from date to weekday' ;  # 8-21 is a tue 
+	is  $cal->name( date=>'2012-08-22', time=>'12:00' ), '', 'convert from date to weekday' ;  
 }
 
 #done_testing;
