@@ -68,16 +68,6 @@ sub contains {
     elsif( $when ne $self->weekday ) {
         return ;
     }
-    #   if ( $type eq $self->type ) {
-    #       return if $when ne $self->when;
-    #   }
-    #   elsif ( $type eq 'date' and $self->type eq 'weekday' ) {
-    #       return;
-    #   }
-    #   elsif( $when ne $self->weekday ) {
-    #       return ;
-    #   }
-
 
     if ($time) {
         return $time >= $self->start && $time < $self->end;

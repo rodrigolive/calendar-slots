@@ -24,9 +24,6 @@ has 'slots' => (
     }
 );
 
-use YAML;
-sub _dump {  print Dump @_ }
-
 sub slot {
     my $self = shift;
 	for my $slot ( $self->_create_slots( @_ ) ) {

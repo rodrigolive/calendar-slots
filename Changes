@@ -1,3 +1,7 @@
+0.10  Thu Nov 12 09:49:06 CET 2009
+  * Fixed slot name bug - spaces and other chars removed inadvertently
+  * Added weekday to date conversions for slot finding
+
 0.05  Thu Nov 12 09:49:06 CET 2009
   * Fixed failed tests with missing dependency II
 
@@ -10,6 +14,6 @@
 0.02  Wed, 30 Sep 2009 01:45:04 +0100
   * Fix dependencies
 
-0.10  Sun, 27 Jun 2009 20:59:11 +0100
+0.01  Sun, 27 Jun 2009 20:59:11 +0100
   * Initial release
 
