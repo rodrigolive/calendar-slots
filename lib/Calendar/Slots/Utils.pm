@@ -12,7 +12,7 @@ require Exporter;
 
 sub format_args {
 	my %args = @_;
-    $args{$_} =~ s{[\-|\:|\s]}{}g for keys %args;
+    $args{$_} =~ s{[\-|\:|\s]}{}g for grep !/name/, keys %args;
 	return %args;
 }
 
