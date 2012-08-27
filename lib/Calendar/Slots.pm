@@ -86,23 +86,32 @@ sub _merge {
 	unless( $slot->same_type($new) && $slot->same_day($new) ) {
 		return ( $slot, $self->_merge( $new, @slots ) );
 	}
+    my ( $s1, $s2, $n1, $n2 ) = ( 
+        $slot->start, $slot->end, $new->start, $new->end
+    );
+    # warn join ';', $new->name, '--> ', $n1, $n2, '***', $slot->name, $s1, $s2;
     if ( $slot->name eq $new->name ) {
-        if ( $slot->start <= $new->end and $slot->end >= $new->end ) {
+        # s: 10-12, n: 09-12 => merge start
+        if ( $n1 < $s1 and $n2 <= $s2 and $n2 >= $s1 ) {
             $slot->start( $new->start );
             return $self->_merge( $slot, @slots );
         }
-        elsif ( $slot->end >= $new->start and $slot->start <= $new->start ) {
+        # s: 10-12, n: 11-13 => merge end
+        elsif ( $n1 <= $s2 and $n1 >= $s1 and $n2 > $s2 ) {
             $slot->end( $new->end );
             return $self->_merge( $slot, @slots );
         }
-        elsif ( $slot->start <= $new->start and $new->end <= $slot->end ) {
+        # s: 10-12, n: 11-12 => discard new
+        elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
             return ($slot, @slots);
         }
-        elsif ( $new->start < $slot->start and $slot->end < $new->end ) {
+        # s: 10-12, n: 09-13 => merge all
+        elsif ( $n1 < $s1 and $s2 < $n2 ) {
             $slot->start( $new->start );
             $slot->end( $new->end );
             return $self->_merge( $slot, @slots );
         }
+        # s: 10-12, n: 01-05 => add
 		else {
 			return ($slot, $self->_merge( $new, @slots) );
 		}

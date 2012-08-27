@@ -3,7 +3,7 @@ use warnings;
 use Test::More; # tests => 45;
 use Calendar::Slots;
 use DateTime;
-sub _dump {  require YAML; print YAML::Dump( @_ ) }
+sub _dump {  require YAML; warn YAML::Dump( @_ ) }
 
 {
     my $cal = new Calendar::Slots; 
@@ -82,6 +82,7 @@ sub _dump {  require YAML; print YAML::Dump( @_ ) }
     is( $cal->name( weekday=>7, time=>'11:00' ), 'urgent', 'overlapping urgent time found' );
 
     $cal->slot( date=>'2009-10-11', start=>'11:00', end=>'22:00', name=>'normal' ); 
+    # N: 10:30 - 22:00, U: 22:00 - 22:30
 
     is( $cal->name( date=>'2009-10-11', time=>'11:00' ), 'normal', 'split normal time found' );
     is( $cal->name( date=>'2009-10-11', time=>'21:59' ), 'normal', 'split late normal time found' );
@@ -89,6 +90,8 @@ sub _dump {  require YAML; print YAML::Dump( @_ ) }
     is( $cal->num_slots, 2, 'many overlapping slots merged' );
 
     $cal->slot( date=>'2009-10-11', start=>'12:00', end=>'13:00', name=>'urgent' ); 
+    # N: 10:30 - 12:00, U: 12-13, N: 13-22, U: 22:00 - 22:30
+    #die _dump $cal;
 
     is( $cal->name( date=>'2009-10-11', time=>'12:00' ), 'urgent', 'split content urgent time found' );
     is( $cal->num_slots, 4, 'many overlapping slots merged' );
@@ -158,14 +161,6 @@ sub _dump {  require YAML; print YAML::Dump( @_ ) }
     $cal->slot( weekday=>1, start=>'12:00', end=>'06:00', name=>'normal', data=>{ yy=>10, xx=>33 } ); 
     is  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{xx}, 33, 'data param';
     ok  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{yy} != 12, 'not data param';
-}
-
-{
-    my $cal = new Calendar::Slots;
-    $cal->slot( weekday=>1, start=>'10:00', end=>'14:00', name=>'normal' );
-    $cal->slot( weekday=>1, start=>'12:00', end=>'14:00', name=>'normal' );
-    ok ref $cal->find( weekday=>1, time=>'11:00' ), 'ok slot';
-    is  $cal->find( weekday=>1, time=>'11:00' )->name, 'normal' , 'ok slot';
 }
 
 done_testing;
