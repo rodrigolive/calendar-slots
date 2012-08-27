@@ -160,4 +160,12 @@ sub _dump {  require YAML; print YAML::Dump( @_ ) }
     ok  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{yy} != 12, 'not data param';
 }
 
+{
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'10:00', end=>'14:00', name=>'normal' );
+    $cal->slot( weekday=>1, start=>'12:00', end=>'14:00', name=>'normal' );
+    ok ref $cal->find( weekday=>1, time=>'11:00' ), 'ok slot';
+    is  $cal->find( weekday=>1, time=>'11:00' )->name, 'normal' , 'ok slot';
+}
+
 done_testing;
