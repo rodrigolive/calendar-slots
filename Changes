@@ -1,3 +1,10 @@
+0.14 Mon Aug 27 22:36:46 CEST 2012
+  * NEW merge option materialize now treats dates and weekdays the same
+  * NEW week_of parameter
+
+0.13 Mon Aug 27 18:59:10 CEST 2012
+  * Fixed slot data missing
+
 0.12 Mon Aug 27 18:46:28 CEST 2012
   * Fixed an overlapping bug, see t/overlap.t for test case
 

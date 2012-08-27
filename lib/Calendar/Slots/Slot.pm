@@ -4,12 +4,13 @@ use Carp;
 use Moose::Util::TypeConstraints;
 use namespace::autoclean;
 
-has name    => ( is => 'rw', isa => 'Str' );  # the slot given name
-has when    => ( is => 'rw', isa => 'Int', required=>1, );  # weekday num or date
-has type    => ( is => 'rw', isa => enum([qw/weekday date/]), required=>1 );  # type of slot
-has start   => ( is => 'rw', isa => 'Int' );  # start time
-has end     => ( is => 'rw', isa => 'Int' );  # end time
-has data    => ( is => 'rw', isa => 'Any' );  # free data for your own use
+has name     => ( is => 'rw', isa => 'Str' );  # the slot given name
+has when     => ( is => 'rw', isa => 'Int', required=>1, );  # weekday num or date
+has type     => ( is => 'rw', isa => enum([qw/weekday date/]), required=>1 );  # type of slot
+has start    => ( is => 'rw', isa => 'Int' );  # start time
+has end      => ( is => 'rw', isa => 'Int' );  # end time
+has data     => ( is => 'rw', isa => 'Any' );  # free data for your own use
+has _weekday => ( is => 'rw', isa => 'Num' );  # cache
 
 use Calendar::Slots::Utils;
 
@@ -92,8 +93,10 @@ sub weekday {
 	my $self = shift;
 	my $day;
 	if( $self->type eq 'date' ) {
+        my $wk = $self->_weekday;
+        return $wk if defined $wk;
 		my $dt = DateTime->new( $self->ymd_hash );
-		return $dt->strftime('%u');
+		return $self->_weekday( $dt->strftime('%u') ); # cache
 	}
 	else {
 		return $self->when;

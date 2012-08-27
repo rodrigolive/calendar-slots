@@ -28,7 +28,7 @@ sub slot {
     my $self = shift;
 	for my $slot ( $self->_create_slots( @_ ) ) {
 		$self->_validate($slot) unless $self->overlapping;
-		my @slots = $self->_merge( $slot, $self->all );
+		my @slots = $self->_merge( {}, $slot, $self->all );
 		$self->clear_slots;
 		$self->add_slots( @slots );
 	}
@@ -74,8 +74,91 @@ sub _validate {
 	my $slot = shift;
 }
 
-#merge slots that are next to each other
 sub _merge {
+    my $self = shift;
+    my $opts = shift;
+    my $new  = shift;
+    my @slots = @_;
+    unless( scalar @slots ) {
+        return $new;
+    }
+    my $slot = shift @slots;
+    if( $opts->{materialize} ) {
+        if( ! $slot->same_weekday( $new ) ) {
+            return ( $slot, $self->_merge( $opts, $new, @slots ) );
+        }
+    }
+    elsif( !( $slot->same_type($new) && $slot->same_day($new) ) ) {
+        # skip this slot
+        return ( $slot, $self->_merge( $opts, $new, @slots ) );
+    }
+    my ( $s1, $s2, $n1, $n2 ) = ( 
+        $slot->start, $slot->end, $new->start, $new->end
+    );
+    # warn join ';', $new->name, '--> ', $n1, $n2, '***', $slot->name, $s1, $s2;
+    if ( $slot->name eq $new->name ) {
+        # s: 10-12, n: 09-12 => merge start
+        if ( $n1 < $s1 and $n2 <= $s2 and $n2 >= $s1 ) {
+            $slot->start( $new->start );
+            return $self->_merge( $opts, $slot, @slots );
+        }
+        # s: 10-12, n: 11-13 => merge end
+        elsif ( $n1 <= $s2 and $n1 >= $s1 and $n2 > $s2 ) {
+            $slot->end( $new->end );
+            return $self->_merge( $opts, $slot, @slots );
+        }
+        # s: 10-12, n: 11-12 => discard new
+        elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
+            return ($slot, @slots);
+        }
+        # s: 10-12, n: 09-13 => merge all
+        elsif ( $n1 < $s1 and $s2 < $n2 ) {
+            $slot->start( $new->start );
+            $slot->end( $new->end );
+            return $self->_merge( $opts, $slot, @slots );
+        }
+        # s: 10-12, n: 01-05 => add
+        else {
+            return ($slot, $self->_merge( $opts, $new, @slots) );
+        }
+    } elsif( ! $self->overlapping ) {
+        if ( $slot->start == $new->start and $slot->end == $new->end ) {
+            return $self->_merge($opts, $new, @slots);
+        }
+        elsif ( $new->start < $slot->start and $new->end >= $slot->start and $new->end <= $slot->end ) {
+            $slot->start( $new->end );
+            return ($slot, $self->_merge( $opts, $new, @slots ) );
+        }
+        elsif ( $new->start >= $slot->start and $new->start < $slot->end and $new->end >= $slot->end ) {
+            $slot->end( $new->start );
+            return ($slot, $self->_merge( $opts, $new, @slots ) );
+        }
+        elsif ( $slot->start < $new->start and $new->end < $slot->end ) {
+            my $third = new Calendar::Slots::Slot(
+                name  => $slot->name,
+                data  => $slot->data,
+                when   => $slot->when,
+                start => $new->end,
+                end   => $slot->end
+            );
+            $slot->end( $new->start );
+            return ( $slot, $third, $new, @slots );
+        }
+        elsif ( $new->start < $slot->start and $slot->end < $new->end ) {
+            return $self->_merge( $opts, $new, @slots );
+        }
+        else {
+            return ($slot, $self->_merge( $opts, $new, @slots) );
+        }
+    }
+    else {
+        # overlapping 
+        return ($slot, $self->_merge( $opts, $new, @slots) );
+    }
+}
+
+#merge slots that are next to each other
+sub _merge2 {
     my $self = shift;
     my $new  = shift;
 	my @slots = @_;
@@ -130,6 +213,7 @@ sub _merge {
         elsif ( $slot->start < $new->start and $new->end < $slot->end ) {
             my $third = new Calendar::Slots::Slot(
                 name  => $slot->name,
+                data  => $slot->data,
                 when   => $slot->when,
                 start => $new->end,
                 end   => $slot->end
@@ -160,6 +244,54 @@ sub sorted {
 	sort {
 		$a->numeric <=> $b->numeric
 	} $self->all;
+}
+
+sub clone {
+    my $self = shift;
+    my $new = __PACKAGE__->new( %$self, slots=>[] );
+    $new->clear_slots;
+    $new->slot( %$_ ) for $self->all;
+    return $new;
+}
+
+sub week_of {
+    my ($self, $date ) = @_;
+    $date =~ s/\D//g;
+
+    # clone 
+    $self = $self->clone;
+
+    # find a monday
+    my $dt = parse_dt( '%Y%m%d', $date );
+    my $wk = $dt->wday;
+    my $ep = $dt->epoch;
+    # sunday
+    my $sunday_ep = $ep + ( (7-$wk) * 86400 );
+    my $sunday = substr DateTime->from_epoch( epoch=>$sunday_ep ), 0, 10;
+    # monday
+    $wk = 7 if $wk == 0;
+    my $monday_ep = $ep - ( ( $wk - 1 ) * 86400 );
+    my $monday = substr DateTime->from_epoch( epoch=>$monday_ep ), 0, 10;
+    $sunday =~ s/\D//g;
+    $monday =~ s/\D//g;
+    #  die "$monday - $sunday";
+
+    # get rid of dates outside this date range
+    my @slots = grep {
+        if( $_->type eq 'weekday' ) {
+            1;
+        }
+        elsif( $monday <= $_->when && $_->when <= $sunday ) {
+            1
+        }
+    } $self->all;
+
+    # merge materialized
+    $self->clear_slots;
+    @slots = $self->_merge( { materialize => 1 }, @slots );
+    $self->clear_slots;
+    $self->add_slots( @slots );
+    return $self;
 }
 
 sub find {
@@ -268,6 +400,15 @@ Shortcut method to L<find|/find> a slot and return a name.
 =head2 sorted 
 
 Returns a  ARRAY of all slot objects in the calendar.
+
+=head2 week_of( date ) 
+
+Returns an instance of C<Calendar::Slots> with actual 
+dates merged for the week that comprises 
+the passed C<date>.  
+
+    my $week = $cal->week_of( 2012_10_22 );
+    $week->find( weekday=>2, time=>10_30 );  # ...
 
 =head2 all 
 
