@@ -4,7 +4,8 @@ use Test::More;
 use Calendar::Slots;
 use DateTime;
 sub _dump {  require YAML; warn YAML::Dump( @_ ) }
-if(0){
+
+{
     my $cal = new Calendar::Slots;
     $cal->slot( weekday=>1, start=>'10:00', end=>'14:00', name=>'normal' );
     $cal->slot( weekday=>1, start=>'12:00', end=>'14:00', name=>'normal' );
@@ -59,6 +60,25 @@ if(0){
     is $cal->num_slots , 3, 'three materialized';
     my $slot = $cal->find( weekday=>2, time=>'19:00' );
     is $slot->end , '2330', 'just one slot2';
+}
+{
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'00:00', end=>'24:00', name=>'normal' );
+    $cal->slot( date=>20120827, start=>'12:00', end=>'21:00', name=>'normal' ); 
+    $cal = $cal->week_of( '2012-08-29' );  # wed; monday on 8/27
+    is $cal->num_slots , 1, 'one materialized';
+    #my $slot = $cal->find( weekday=>2, time=>'19:00' );
+    #is $slot->end , '2330', 'just one slot2';
+}
+OO: {
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'00:00', end=>'24:00', name=>'B' );
+    $cal->slot( date=>20120827, start=>'12:00', end=>'21:00', name=>'N' ); 
+    $cal = $cal->week_of( '2012-08-29' );  # wed; monday on 8/27
+    #_dump $cal;
+    is $cal->num_slots , 3, 'three materialized';
+    my $slot = $cal->find( weekday=>1, time=>'19:00' );
+    is $slot->end , '2100', 'split slot';
 }
 
 done_testing;

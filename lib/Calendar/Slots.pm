@@ -26,12 +26,15 @@ has 'slots' => (
 
 sub slot {
     my $self = shift;
+    my @ret;
 	for my $slot ( $self->_create_slots( @_ ) ) {
 		$self->_validate($slot) unless $self->overlapping;
 		my @slots = $self->_merge( {}, $slot, $self->all );
 		$self->clear_slots;
 		$self->add_slots( @slots );
+        push @ret, @slots;
 	}
+    return @ret;
 }
 
 sub _create_slots {
@@ -74,6 +77,7 @@ sub _validate {
 	my $slot = shift;
 }
 
+#merge slots that are next to each other
 sub _merge {
     my $self = shift;
     my $opts = shift;
@@ -95,7 +99,7 @@ sub _merge {
     my ( $s1, $s2, $n1, $n2 ) = ( 
         $slot->start, $slot->end, $new->start, $new->end
     );
-    # warn join ';', $new->name, '--> ', $n1, $n2, '***', $slot->name, $s1, $s2;
+    #warn join ';', 'new', $new->name, ';', $n1, $n2, '***', $slot->name, $s1, $s2;
     if ( $slot->name eq $new->name ) {
         # s: 10-12, n: 09-12 => merge start
         if ( $n1 < $s1 and $n2 <= $s2 and $n2 >= $s1 ) {
@@ -157,82 +161,6 @@ sub _merge {
     }
 }
 
-#merge slots that are next to each other
-sub _merge2 {
-    my $self = shift;
-    my $new  = shift;
-	my @slots = @_;
-	unless( scalar @slots ) {
-		return $new;
-	}
-    my $slot = shift @slots;
-	unless( $slot->same_type($new) && $slot->same_day($new) ) {
-		return ( $slot, $self->_merge( $new, @slots ) );
-	}
-    my ( $s1, $s2, $n1, $n2 ) = ( 
-        $slot->start, $slot->end, $new->start, $new->end
-    );
-    # warn join ';', $new->name, '--> ', $n1, $n2, '***', $slot->name, $s1, $s2;
-    if ( $slot->name eq $new->name ) {
-        # s: 10-12, n: 09-12 => merge start
-        if ( $n1 < $s1 and $n2 <= $s2 and $n2 >= $s1 ) {
-            $slot->start( $new->start );
-            return $self->_merge( $slot, @slots );
-        }
-        # s: 10-12, n: 11-13 => merge end
-        elsif ( $n1 <= $s2 and $n1 >= $s1 and $n2 > $s2 ) {
-            $slot->end( $new->end );
-            return $self->_merge( $slot, @slots );
-        }
-        # s: 10-12, n: 11-12 => discard new
-        elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
-            return ($slot, @slots);
-        }
-        # s: 10-12, n: 09-13 => merge all
-        elsif ( $n1 < $s1 and $s2 < $n2 ) {
-            $slot->start( $new->start );
-            $slot->end( $new->end );
-            return $self->_merge( $slot, @slots );
-        }
-        # s: 10-12, n: 01-05 => add
-		else {
-			return ($slot, $self->_merge( $new, @slots) );
-		}
-    } elsif( ! $self->overlapping ) {
-        if ( $slot->start == $new->start and $slot->end == $new->end ) {
-            return $self->_merge($new, @slots);
-        }
-        elsif ( $new->start < $slot->start and $new->end >= $slot->start and $new->end <= $slot->end ) {
-            $slot->start( $new->end );
-            return ($slot, $self->_merge( $new, @slots ) );
-        }
-        elsif ( $new->start >= $slot->start and $new->start < $slot->end and $new->end >= $slot->end ) {
-            $slot->end( $new->start );
-            return ($slot, $self->_merge( $new, @slots ) );
-        }
-        elsif ( $slot->start < $new->start and $new->end < $slot->end ) {
-            my $third = new Calendar::Slots::Slot(
-                name  => $slot->name,
-                data  => $slot->data,
-                when   => $slot->when,
-                start => $new->end,
-                end   => $slot->end
-            );
-            $slot->end( $new->start );
-            return ( $slot, $third, $new, @slots );
-        }
-        elsif ( $new->start < $slot->start and $slot->end < $new->end ) {
-            return $self->_merge( $new, @slots );
-        }
-		else {
-			return ($slot, $self->_merge( $new, @slots) );
-		}
-	}
-	else {
-		# overlapping 
-		return ($slot, $self->_merge( $new, @slots) );
-	}
-}
 
 sub all {
 	my $self = shift;
@@ -275,6 +203,7 @@ sub week_of {
     $sunday =~ s/\D//g;
     $monday =~ s/\D//g;
     #  die "$monday - $sunday";
+    sub _dump { require YAML; YAML::Dump( \@_ ) };
 
     # get rid of dates outside this date range
     my @slots = grep {
@@ -288,9 +217,10 @@ sub week_of {
 
     # merge materialized
     $self->clear_slots;
-    @slots = $self->_merge( { materialize => 1 }, @slots );
+    @slots = $self->_merge( { materialize => 1 }, reverse @slots );  # the newest first
     $self->clear_slots;
     $self->add_slots( @slots );
+    #die "333" . _dump $self;
     return $self;
 }
 
