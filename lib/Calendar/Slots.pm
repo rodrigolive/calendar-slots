@@ -115,11 +115,9 @@ sub _merge {
         elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
             return ($slot, @slots);
         }
-        # s: 10-12, n: 09-13 => merge all
+        # s: 10-12, n: 09-13 => discard old
         elsif ( $n1 < $s1 and $s2 < $n2 ) {
-            $slot->start( $new->start );
-            $slot->end( $new->end );
-            return $self->_merge( $opts, $slot, @slots );
+            return $self->_merge( $opts, $new, @slots );
         }
         # s: 10-12, n: 01-05 => add
         else {
@@ -129,11 +127,11 @@ sub _merge {
         if ( $slot->start == $new->start and $slot->end == $new->end ) {
             return $self->_merge($opts, $new, @slots);
         }
-        elsif ( $new->start < $slot->start and $new->end >= $slot->start and $new->end <= $slot->end ) {
+        elsif ( $n1 <= $s1 and ( $n2 >= $s1 and $n2 <= $s2 ) ) {
             $slot->start( $new->end );
             return ($slot, $self->_merge( $opts, $new, @slots ) );
         }
-        elsif ( $new->start >= $slot->start and $new->start < $slot->end and $new->end >= $slot->end ) {
+        elsif ( ( $n1 >= $s1 and $n1 < $s2 ) and $n2 >= $s2 ) {
             $slot->end( $new->start );
             return ($slot, $self->_merge( $opts, $new, @slots ) );
         }
@@ -204,23 +202,32 @@ sub week_of {
     $monday =~ s/\D//g;
     #  die "$monday - $sunday";
     sub _dump { require YAML; YAML::Dump( \@_ ) };
+    return $self->materialize( $monday, $sunday );
+}
+
+sub materialize {
+    my ($self, $start, $end) = @_;
 
     # get rid of dates outside this date range
-    my @slots = grep {
-        if( $_->type eq 'weekday' ) {
-            1;
+    my @s_wk ;
+    my @s_date;
+    for my $slot ( $self->all ) {
+        if( $slot->type eq 'weekday' ) {
+            push @s_wk, $slot;
         }
-        elsif( $monday <= $_->when && $_->when <= $sunday ) {
-            1
+        elsif( $start <= $slot->when && $slot->when <= $end ) {
+            push @s_date, $slot;
         }
-    } $self->all;
+    }
 
     # merge materialized
     $self->clear_slots;
-    @slots = $self->_merge( { materialize => 1 }, reverse @slots );  # the newest first
+    my @slots = @s_wk;
+    for( @s_date ) {
+        @slots = $self->_merge( { materialize => 1 }, $_, @slots );  # put the dates first
+    }
     $self->clear_slots;
     $self->add_slots( @slots );
-    #die "333" . _dump $self;
     return $self;
 }
 
@@ -240,6 +247,15 @@ sub find {
 sub name {
 	my $slot;
 	return $slot->name if $slot = find( @_ );
+}
+
+sub as_table {
+    my $self = shift;
+    require Data::Format::Pretty::Console;
+    return Data::Format::Pretty::Console::format_pretty( 
+        [ map { { %$_ } } $self->sorted ],
+        { table_column_orders=>[ [qw/name start end when type _weekday data/] ] }
+    );
 }
 
 1; 
@@ -331,9 +347,17 @@ Shortcut method to L<find|/find> a slot and return a name.
 
 Returns a  ARRAY of all slot objects in the calendar.
 
-=head2 week_of( date ) 
+=head2 materialize ( start_date, end_date ) 
 
-Returns an instance of C<Calendar::Slots> with actual 
+Returns an instance of L<Calendar::Slots> with
+date slots converted into weekdays for a given
+date range.
+
+    my $new_cal = $cal->materialize( 2012_10_22, 2012_10_28 );
+
+=head2 week_of ( date ) 
+
+Returns a materialized instance of L<Calendar::Slots> with actual 
 dates merged for the week that comprises 
 the passed C<date>.  
 
@@ -343,6 +367,14 @@ the passed C<date>.
 =head2 all 
 
 Returns an ARRAY of all slot objects in the calendar.
+
+=head2 as_table
+
+Returns a console string as a table for the calendar.
+
+Requires that L<Data::Format::Pretty::Console> be installed.
+
+    print $cal->as_table;
 
 =head1 SEE ALSO
 

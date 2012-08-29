@@ -146,7 +146,7 @@ sub reschedule {
 sub numeric {
     my $self = shift;
 	if( $self->type eq 'date' ) {
-		sprintf("%08d%04d%04d", $self->when, $self->start, $self->end );
+		sprintf("%01d%08d%04d%04d", $self->weekday, 0, $self->start, $self->end );
 	} else {
 		sprintf("%01d%08d%04d%04d", $self->when, 0, $self->start, $self->end );
 	}
