@@ -1,5 +1,6 @@
 0.15 Wed Aug 29 17:20:23 CEST 2012
   * FIX bug with new slots that are over old ones
+  * FIX bug for slots with date == date
 
 0.14 Wed Aug 29 12:59:43 CEST 2012
   * FIX crossing slots of different type

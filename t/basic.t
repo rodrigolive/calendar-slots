@@ -162,5 +162,22 @@ sub _dump {  require YAML; warn YAML::Dump( @_ ) }
     is  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{xx}, 33, 'data param';
     ok  $cal->find( date=>'2012-08-20', time=>'12:00' )->data->{yy} != 12, 'not data param';
 }
+{
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'1200', end=>'1200', name=>'normal', data=>{ yy=>10, xx=>33 } ); 
+    $cal->slot( weekday=>1, start=>'1200', end=>'1200', name=>'normal', data=>{ yy=>10, xx=>33 } ); 
+    is( $cal->num_slots, 1, 'same slot over several days' );
+}
+
+{
+    my $cal = new Calendar::Slots;
+    $cal->slot( weekday=>1, start=>'1200', end=>'1200', name=>'normal' );  # created, but ignored
+    $cal->slot( weekday=>1, start=>'1230', end=>'1200', name=>'normal' );  # ends next day
+    $cal->slot( weekday=>1, start=>'1300', end=>'1200', name=>'normal', data=>99 ); # insider, expanded 
+    # warn $cal->as_table;
+    is( $cal->num_slots, 2, 'same slot over several days' );
+    is( [$cal->all]->[0]->data, 99, 'same slot over several days' );
+    is( [$cal->all]->[1]->data, 99, 'same slot over several days' );
+}
 
 done_testing;

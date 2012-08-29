@@ -100,61 +100,69 @@ sub _merge {
         $slot->start, $slot->end, $new->start, $new->end
     );
     #warn join ';', 'new', $new->name, ';', $n1, $n2, '***', $slot->name, $s1, $s2;
-    if ( $slot->name eq $new->name ) {
-        # s: 10-12, n: 09-12 => merge start
-        if ( $n1 < $s1 and $n2 <= $s2 and $n2 >= $s1 ) {
-            $slot->start( $new->start );
-            return $self->_merge( $opts, $slot, @slots );
-        }
-        # s: 10-12, n: 11-13 => merge end
-        elsif ( $n1 <= $s2 and $n1 >= $s1 and $n2 > $s2 ) {
-            $slot->end( $new->end );
-            return $self->_merge( $opts, $slot, @slots );
-        }
-        # s: 10-12, n: 11-12 => discard new
-        elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
-            return ($slot, @slots);
-        }
-        # s: 10-12, n: 09-13 => discard old
-        elsif ( $n1 < $s1 and $s2 < $n2 ) {
+
+    my $same_name = $slot->name eq $new->name;
+    if ( ! $same_name && $self->overlapping) {
+        # overlapping ok
+        return ($slot, $self->_merge( $opts, $new, @slots) );
+    }
+    # invalid new, remove
+    elsif ( $n1 == $n2 ) {
+        return ( $slot, @slots );
+    }
+    # invalid slot, remove
+    elsif ( $s1 == $s2 ) {
+        return $self->_merge($opts, $new, @slots);
+    }
+    # equals => discard slot, keep new, discard old
+    elsif ( $s1 == $n1 and $s2 == $n2 ) {
+        return $self->_merge($opts, $new, @slots);
+    }
+    # s: 10-12, n: 09-13 => outsider, keep new, discard old
+    elsif ( $n1 <= $s1 and $s2 <= $n2 ) {
+        return $self->_merge( $opts, $new, @slots );
+    }
+    # s: 10-12, n: 11-12 => insider
+    elsif ( $n1 >= $s1 and $n2 <= $s2 ) {
+        if( $same_name ) {   # discard old, expand new
+            $new->start( $slot->start );
+            $new->end( $slot->end );
             return $self->_merge( $opts, $new, @slots );
+        } else {
+                my $third = new Calendar::Slots::Slot(
+                    name  => $slot->name,
+                    data  => $slot->data,
+                    when  => $slot->when,
+                    start => $new->end,
+                    end   => $slot->end
+                );
+                #warn "THIRS=================" . join ',', $third->start, $third->end;
+                $slot->end( $new->start );
+                return $self->_merge( $opts, $new, $self->_merge( $opts, $third, $self->_merge( $opts, $slot, @slots ) ) );
         }
-        # s: 10-12, n: 01-05 => add
-        else {
-            return ($slot, $self->_merge( $opts, $new, @slots) );
-        }
-    } elsif( ! $self->overlapping ) {
-        if ( $slot->start == $new->start and $slot->end == $new->end ) {
-            return $self->_merge($opts, $new, @slots);
-        }
-        elsif ( $n1 <= $s1 and ( $n2 >= $s1 and $n2 <= $s2 ) ) {
+    }
+    # s: 10-12, n: 09-12 => merge start
+    elsif ( $n1 <= $s1 and ( $n2 >= $s1 and $n2 <= $s2 ) ) {
+        if( $same_name ) {
+            $new->end( $slot->end );
+            return $self->_merge( $opts, $new, @slots );
+        } else {
             $slot->start( $new->end );
             return ($slot, $self->_merge( $opts, $new, @slots ) );
         }
-        elsif ( ( $n1 >= $s1 and $n1 < $s2 ) and $n2 >= $s2 ) {
+    }
+    # s: 10-12, n: 11-13 => merge end
+    elsif ( ( $n1 >= $s1 and $n1 <= $s2 ) and $n2 >= $s2 ) {
+        if( $same_name ) {
+            $new->start( $slot->start );
+            return $self->_merge( $opts, $new, @slots );
+        } else {
             $slot->end( $new->start );
             return ($slot, $self->_merge( $opts, $new, @slots ) );
         }
-        elsif ( $slot->start < $new->start and $new->end < $slot->end ) {
-            my $third = new Calendar::Slots::Slot(
-                name  => $slot->name,
-                data  => $slot->data,
-                when   => $slot->when,
-                start => $new->end,
-                end   => $slot->end
-            );
-            $slot->end( $new->start );
-            return ( $slot, $third, $new, @slots );
-        }
-        elsif ( $new->start < $slot->start and $slot->end < $new->end ) {
-            return $self->_merge( $opts, $new, @slots );
-        }
-        else {
-            return ($slot, $self->_merge( $opts, $new, @slots) );
-        }
     }
+    # s: 10-12, n: 01-05 => add
     else {
-        # overlapping 
         return ($slot, $self->_merge( $opts, $new, @slots) );
     }
 }
@@ -254,7 +262,7 @@ sub as_table {
     require Data::Format::Pretty::Console;
     return Data::Format::Pretty::Console::format_pretty( 
         [ map { { %$_ } } $self->sorted ],
-        { table_column_orders=>[ [qw/name start end when type _weekday data/] ] }
+        { table_column_orders=>[ [qw/name start end when type _weekday/] ] }
     );
 }
 

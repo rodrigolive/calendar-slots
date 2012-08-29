@@ -32,6 +32,7 @@ around BUILDARGS => sub {
       || ( $args{type} eq 'date' ? $args{date} : $args{weekday} );
 	delete $args{date};
 	delete $args{weekday};
+
 	$class->$orig(%args);
 };
 
